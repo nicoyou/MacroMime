@@ -109,7 +109,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	public event Action? StateChangedForTray;
 
 	/// <summary>マクロフォルダを読み直して一覧とホットキーを更新する</summary>
-	[RelayCommand]
 	private void RefreshMacros() {
 		Directory.CreateDirectory(repository.macrosFolder);
 		macros.Clear();
@@ -192,6 +191,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 			item.Hotkey = dialog.chord;
 			PersistBindings();
 		}
+	}
+
+	/// <summary>確認の上で対象マクロのファイルをゴミ箱へ移動し、一覧と設定を更新する</summary>
+	/// <param name="item">削除対象のマクロの行。null なら選択中のマクロ</param>
+	[RelayCommand(CanExecute = nameof(isIdle))]
+	private void DeleteMacro(MacroItemViewModel? item) {
+		item ??= SelectedMacro;
+		if (item is null) return;
+		var confirmation = MessageBox.Show(
+			$"「{item.Name}」をゴミ箱へ移動しますか?", "マクロの削除",
+			MessageBoxButton.YesNo, MessageBoxImage.Question);
+		if (confirmation != MessageBoxResult.Yes) return;
+		try {
+			repository.Delete(item.filePath);
+		}
+		catch (Exception ex) when (ex is IOException or FileNotFoundException) {
+			MessageBox.Show(ex.Message, "削除できません", MessageBoxButton.OK, MessageBoxImage.Warning);
+		}
+		RefreshMacros();
+		PersistBindings();
 	}
 
 	/// <summary>マクロフォルダをエクスプローラーで開く</summary>
@@ -294,6 +313,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 		StopRecordingCommand.NotifyCanExecuteChanged();
 		PlayCommand.NotifyCanExecuteChanged();
 		StopPlaybackCommand.NotifyCanExecuteChanged();
+		DeleteMacroCommand.NotifyCanExecuteChanged();
 		StateChangedForTray?.Invoke();
 	}
 

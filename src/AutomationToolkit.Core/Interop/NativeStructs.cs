@@ -111,6 +111,31 @@ internal struct MSG {
 	public POINT pt;
 }
 
+/// <summary>SHFileOperation に渡すシェル操作の指定</summary>
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+internal struct SHFILEOPSTRUCT {
+	/// <summary>ダイアログの親ウィンドウのハンドル。0 で親なし</summary>
+	public nint hwnd;
+	/// <summary>操作種別を示す FO_* 値</summary>
+	public uint wFunc;
+	/// <summary>操作対象のパス。二重の null 終端が必要</summary>
+	[MarshalAs(UnmanagedType.LPWStr)]
+	public string pFrom;
+	/// <summary>移動・コピー先のパス。削除では null</summary>
+	[MarshalAs(UnmanagedType.LPWStr)]
+	public string? pTo;
+	/// <summary>動作を示す FOF_* フラグ</summary>
+	public ushort fFlags;
+	/// <summary>ユーザーによって操作が中断されたかどうか</summary>
+	[MarshalAs(UnmanagedType.Bool)]
+	public bool fAnyOperationsAborted;
+	/// <summary>リネーム対応表のハンドル。通常は使用しない</summary>
+	public nint hNameMappings;
+	/// <summary>進捗ダイアログのタイトル。通常は使用しない</summary>
+	[MarshalAs(UnmanagedType.LPWStr)]
+	public string? lpszProgressTitle;
+}
+
 /// <summary>Win32 API の定数定義</summary>
 internal static class Win32 {
 	// INPUT.type
@@ -174,6 +199,13 @@ internal static class Win32 {
 	public const uint WM_XBUTTONDOWN = 0x020B;
 	public const uint WM_XBUTTONUP = 0x020C;
 	public const uint WM_MOUSEHWHEEL = 0x020E;
+
+	// SHFileOperation
+	public const uint FO_DELETE = 0x0003;
+	public const ushort FOF_ALLOWUNDO = 0x0040;
+	public const ushort FOF_NOCONFIRMATION = 0x0010;
+	public const ushort FOF_SILENT = 0x0004;
+	public const ushort FOF_NOERRORUI = 0x0400;
 
 	// 仮想キーコード
 	public const int VK_SHIFT = 0x10;

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AutomationToolkit.Core.Interop;
 using AutomationToolkit.Core.Models;
 
 namespace AutomationToolkit.Core.Persistence;
@@ -68,6 +69,26 @@ public sealed class MacroRepository(string folder) {
 		macro.name = newName;
 		using var stream = File.Create(filePath);
 		JsonSerializer.Serialize(stream, macro, MacroJson.Default);
+	}
+
+	/// <summary>マクロファイルをゴミ箱へ移動する</summary>
+	/// <param name="filePath">削除するマクロファイルのパス</param>
+	/// <exception cref="FileNotFoundException">ファイルが存在しない場合</exception>
+	/// <exception cref="IOException">ゴミ箱への移動に失敗した場合</exception>
+	public void Delete(string filePath) {
+		var fullPath = Path.GetFullPath(filePath);
+		if (File.Exists(fullPath) == false) {
+			throw new FileNotFoundException($"マクロファイルが見つかりません: {fullPath}", fullPath);
+		}
+		var operation = new SHFILEOPSTRUCT {
+			wFunc = Win32.FO_DELETE,
+			pFrom = fullPath + "\0", // マーシャリングで付く終端と合わせて二重の null 終端にする
+			fFlags = (ushort)(Win32.FOF_ALLOWUNDO | Win32.FOF_NOCONFIRMATION | Win32.FOF_SILENT | Win32.FOF_NOERRORUI),
+		};
+		var result = NativeMethods.SHFileOperation(ref operation);
+		if (result != 0 || operation.fAnyOperationsAborted) {
+			throw new IOException($"ゴミ箱への移動に失敗しました ( エラーコード: {result} ): {fullPath}");
+		}
 	}
 
 	/// <summary>マクロ名から保存先のファイルパスを求める</summary>

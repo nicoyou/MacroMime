@@ -23,7 +23,8 @@
             <Button Content="▶ 再生" Command="{Binding PlayCommand}" Width="80" Margin="0,0,6,0"/>
             <Button Content="■ 再生停止" Command="{Binding StopPlaybackCommand}" Width="90" Margin="0,0,6,0"/>
             <Separator Margin="6,0"/>
-            <Button Content="更新" Command="{Binding RefreshMacrosCommand}" Width="60" Margin="0,0,6,0"/>
+            <Button Content="🗑 削除" Command="{Binding DeleteMacroCommand}" Width="80" Margin="0,0,6,0"/>
+            <Separator Margin="6,0"/>
             <Button Content="フォルダを開く" Command="{Binding OpenMacrosFolderCommand}" Width="100"/>
         </StackPanel>
 
@@ -52,9 +53,12 @@
         <!-- マクロ一覧 -->
         <DataGrid Grid.Row="2" ItemsSource="{Binding macros}"
                   SelectedItem="{Binding SelectedMacro}"
-                  AutoGenerateColumns="False" CanUserAddRows="False"
+                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                   IsReadOnly="False">
+            <DataGrid.InputBindings>
+                <KeyBinding Key="Delete" Command="{Binding DeleteMacroCommand}"/>
+            </DataGrid.InputBindings>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="名前" Binding="{Binding Name}" Width="*"/>
                 <DataGridTemplateColumn Header="ホットキー" Width="140">
@@ -75,6 +79,6 @@
         </DataGrid>
 
         <TextBlock Grid.Row="3" Margin="0,8,0,0" Foreground="Gray" TextWrapping="Wrap"
-                   Text="ヒント: 名前・速度・ループはセルをダブルクリックで編集。ホットキー欄をクリックで割り当て。既定の録画トグルは Ctrl+Alt+R、全停止は Ctrl+Alt+S。"/>
+                   Text="ヒント: 名前・速度・ループはセルをダブルクリックで編集。ホットキー欄をクリックで割り当て。Delete キーで選択マクロをゴミ箱へ。既定の録画トグルは Ctrl+Alt+R、全停止は Ctrl+Alt+S。"/>
     </Grid>
 </Window>

@@ -117,4 +117,10 @@ internal static class NativeMethods {
 	/// <returns>現在のスレッド ID</returns>
 	[DllImport("kernel32.dll")]
 	internal static extern uint GetCurrentThreadId();
+
+	/// <summary>ファイルのコピー・移動・削除などのシェル操作を実行する</summary>
+	/// <param name="lpFileOp">操作内容を指定する構造体</param>
+	/// <returns>成功なら 0</returns>
+	[DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+	internal static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
 }
