@@ -20,6 +20,9 @@ public sealed partial class MacroItemViewModel : ObservableObject {
 	[ObservableProperty]
 	private int loopCount;
 
+	/// <summary>名前が編集されたときに変更前の名前と共に通知するイベント</summary>
+	public event Action<MacroItemViewModel, string>? NameEdited;
+
 	/// <summary>マクロファイルのパス</summary>
 	public string filePath { get; }
 	/// <summary>マクロファイルのファイル名</summary>
@@ -52,4 +55,9 @@ public sealed partial class MacroItemViewModel : ObservableObject {
 	/// <summary>ホットキー変更時に表示用文字列の変更も通知する</summary>
 	/// <param name="value">変更後のホットキー</param>
 	partial void OnHotkeyChanged(HotkeyChord? value) => OnPropertyChanged(nameof(hotkeyDisplay));
+
+	/// <summary>名前変更時に変更前の名前と共にイベントを通知する</summary>
+	/// <param name="oldValue">変更前の名前</param>
+	/// <param name="newValue">変更後の名前</param>
+	partial void OnNameChanged(string? oldValue, string newValue) => NameEdited?.Invoke(this, oldValue ?? string.Empty);
 }

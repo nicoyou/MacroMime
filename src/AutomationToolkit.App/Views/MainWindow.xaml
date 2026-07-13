@@ -56,7 +56,7 @@
                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                   IsReadOnly="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="名前" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                <DataGridTextColumn Header="名前" Binding="{Binding Name}" Width="*"/>
                 <DataGridTemplateColumn Header="ホットキー" Width="140">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -75,6 +75,6 @@
         </DataGrid>
 
         <TextBlock Grid.Row="3" Margin="0,8,0,0" Foreground="Gray" TextWrapping="Wrap"
-                   Text="ヒント: 速度・ループはセルをダブルクリックで編集。ホットキー欄をクリックで割り当て。既定の録画トグルは Ctrl+Alt+R、全停止は Ctrl+Alt+S。"/>
+                   Text="ヒント: 名前・速度・ループはセルをダブルクリックで編集。ホットキー欄をクリックで割り当て。既定の録画トグルは Ctrl+Alt+R、全停止は Ctrl+Alt+S。"/>
     </Grid>
 </Window>

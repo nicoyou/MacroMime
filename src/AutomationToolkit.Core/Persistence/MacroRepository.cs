@@ -58,6 +58,18 @@ public sealed class MacroRepository(string folder) {
 		return path;
 	}
 
+	/// <summary>マクロの名前を変更し、同じファイルへ上書き保存する</summary>
+	/// <remarks>ファイル名は変更しない</remarks>
+	/// <param name="filePath">名前を変更するマクロファイルのパス</param>
+	/// <param name="newName">変更後のマクロ名</param>
+	/// <exception cref="MacroFormatException">元ファイルが読み込めない場合</exception>
+	public void Rename(string filePath, string newName) {
+		var macro = Load(filePath);
+		macro.name = newName;
+		using var stream = File.Create(filePath);
+		JsonSerializer.Serialize(stream, macro, MacroJson.Default);
+	}
+
 	/// <summary>マクロ名から保存先のファイルパスを求める</summary>
 	/// <remarks>ファイル名に使えない文字は _ に置き換える</remarks>
 	/// <param name="macroName">マクロ名</param>

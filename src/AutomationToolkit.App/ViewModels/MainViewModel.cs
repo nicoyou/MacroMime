@@ -46,6 +46,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	private Guid recordHotkeyId;
 	/// <summary>停止ホットキーの登録 ID</summary>
 	private Guid stopHotkeyId;
+	/// <summary>マクロ名の変更を反映中かどうか。差し戻しによる再入を防ぐ</summary>
+	private bool isApplyingMacroRename;
 	/// <summary>一覧で選択中のマクロ。null なら未選択</summary>
 	[ObservableProperty]
 	private MacroItemViewModel? selectedMacro;
@@ -121,7 +123,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 			catch (MacroFormatException) {
 				name = $"[破損] {Path.GetFileNameWithoutExtension(path)}";
 			}
-			macros.Add(new MacroItemViewModel(path, name, binding));
+			var macroItem = new MacroItemViewModel(path, name, binding);
+			macroItem.NameEdited += OnMacroNameEdited;
+			macros.Add(macroItem);
 		}
 		RebindMacroHotkeys();
 	}
@@ -296,4 +300,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	/// <summary>選択変更時に再生コマンドの実行可否を更新する</summary>
 	/// <param name="value">変更後の選択マクロ</param>
 	partial void OnSelectedMacroChanged(MacroItemViewModel? value) => PlayCommand.NotifyCanExecuteChanged();
+
+	/// <summary>マクロ名の編集を受けてファイルへ反映する。失敗時は元の名前に差し戻す</summary>
+	/// <param name="item">名前が編集されたマクロの行</param>
+	/// <param name="oldName">変更前の名前</param>
+	private void OnMacroNameEdited(MacroItemViewModel item, string oldName) {
+		if (isApplyingMacroRename) return;
+		isApplyingMacroRename = true;
+		try {
+			var newName = item.Name.Trim();
+			if (string.IsNullOrEmpty(newName) || newName == oldName) {
+				item.Name = oldName;
+				return;
+			}
+			try {
+				repository.Rename(item.filePath, newName);
+				item.Name = newName;
+			}
+			catch (Exception ex) when (ex is MacroFormatException or IOException) {
+				MessageBox.Show(ex.Message, "名前を変更できません", MessageBoxButton.OK, MessageBoxImage.Warning);
+				item.Name = oldName;
+			}
+		}
+		finally {
+			isApplyingMacroRename = false;
+		}
+	}
 }

@@ -319,11 +319,12 @@ color.a *= 0.3f; // 30% 薄くする
 1. 定数 ( `const`, `static readonly` 等 )
 2. SerializeField ( インスペクタに公開するフィールド )
 3. フィールド
-4. プロパティ ( `_` 付きのバッキングフィールドが必要な場合は、対応するフィールドと上下にペアで並べる )
-5. ゲッタープロパティ ( `_xxx` をそのまま返すだけのものではなく、バッキングフィールドのペアが存在せず計算結果や式本体で値を返すもの )
-6. Unity ライフサイクルメソッド ( `Awake`, `Start`, `Update` 等 )
-7. メソッド
-8. コールバックメソッド ( `OnXxx` 系 )
+4. event ( `event Action` 等 )
+5. プロパティ ( `_` 付きのバッキングフィールドが必要な場合は、対応するフィールドと上下にペアで並べる )
+6. ゲッタープロパティ ( `_xxx` をそのまま返すだけのものではなく、バッキングフィールドのペアが存在せず計算結果や式本体で値を返すもの )
+7. Unity ライフサイクルメソッド ( `Awake`, `Start`, `Update` 等 )
+8. メソッド
+9. コールバックメソッド ( `OnXxx` 系 )
 
 バッキングフィールドとプロパティのペアは、上記の「フィールド」と「プロパティ」の境界をまたいでも構わないので、必ず隣接させて記述する ( `_` 付きフィールドを上、プロパティを下に置く )。
 
@@ -336,6 +337,8 @@ public class PlayerController : MonoBehaviour {
 
     private int level;
     private float power;
+
+    public event Action onDamaged;
 
     private float _health;
     public float health => _health;

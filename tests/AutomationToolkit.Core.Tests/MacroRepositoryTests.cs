@@ -53,6 +53,28 @@ public class MacroRepositoryTests : IDisposable {
 		Assert.Contains("999", ex.Message);
 	}
 
+	/// <summary>名前を変更するとファイル名はそのままで中身の名前だけ書き換わる</summary>
+	[Fact]
+	public void Rename_UpdatesNameWithoutMovingFile() {
+		var repo = new MacroRepository(tempDir);
+		var path = repo.Save(new Macro { name = "before" });
+
+		repo.Rename(path, "after");
+
+		Assert.Equal("after", repo.Load(path).name);
+		Assert.Equal(path, Assert.Single(repo.ListMacroFiles()));
+	}
+
+	/// <summary>壊れたマクロの名前を変更しようとすると MacroFormatException が発生する</summary>
+	[Fact]
+	public void Rename_CorruptJson_ThrowsMacroFormatException() {
+		Directory.CreateDirectory(tempDir);
+		var path = Path.Combine(tempDir, "broken.json");
+		File.WriteAllText(path, "{ this is not json");
+
+		Assert.Throws<MacroFormatException>(() => new MacroRepository(tempDir).Rename(path, "after"));
+	}
+
 	/// <summary>ファイル名に使えない文字が保存先パスから除去される</summary>
 	[Fact]
 	public void GetPathFor_SanitizesInvalidFileNameChars() {
