@@ -13,6 +13,14 @@ public sealed class PlaybackOptions {
 	public int loopCount { get; set; } = 1;
 }
 
+/// <summary>再生の進行状況</summary>
+/// <param name="stepIndex">これから実行するステップの 0 始まりの番号</param>
+/// <param name="totalSteps">1 周あたりの全ステップ数</param>
+/// <param name="loopIndex">0 始まりのループ周回番号</param>
+/// <param name="loopCount">設定されたループ回数。0 なら無限</param>
+/// <param name="step">これから実行するステップ</param>
+public sealed record PlaybackProgress(int stepIndex, int totalSteps, int loopIndex, int loopCount, MacroStep step);
+
 /// <summary>マクロ再生機能を提供する</summary>
 public interface IMacroPlayer {
 	/// <summary>再生中かどうか</summary>
@@ -20,6 +28,10 @@ public interface IMacroPlayer {
 
 	/// <summary>再生状態が変化したときに発生するイベント</summary>
 	event EventHandler<bool>? IsPlayingChanged;
+
+	/// <summary>次に実行するステップへ進んだときに発生するイベント</summary>
+	/// <remarks>ステップの待機開始前に発生するため、待機中は「これから実行するステップ」を指す</remarks>
+	event EventHandler<PlaybackProgress>? ProgressChanged;
 
 	/// <summary>マクロを再生する</summary>
 	/// <remarks>停止ホットキーによる中断は通常フローのため、キャンセルされた場合は例外を投げず正常終了する</remarks>
@@ -32,7 +44,7 @@ public interface IMacroPlayer {
 
 /// <summary>SendInput でマクロを再生する IMacroPlayer の実装</summary>
 /// <param name="synthesizer">入力の送出に使う InputSynthesizer</param>
-public sealed class MacroPlayer(InputSynthesizer synthesizer) : IMacroPlayer {
+public sealed class MacroPlayer(IInputSynthesizer synthesizer) : IMacroPlayer {
 	/// <summary>再生中なら 1</summary>
 	private int playing;
 
@@ -41,6 +53,8 @@ public sealed class MacroPlayer(InputSynthesizer synthesizer) : IMacroPlayer {
 
 	/// <inheritdoc/>
 	public event EventHandler<bool>? IsPlayingChanged;
+	/// <inheritdoc/>
+	public event EventHandler<PlaybackProgress>? ProgressChanged;
 
 	/// <inheritdoc/>
 	public async Task PlayAsync(Macro macro, PlaybackOptions options, CancellationToken ct) {
@@ -89,7 +103,11 @@ public sealed class MacroPlayer(InputSynthesizer synthesizer) : IMacroPlayer {
 		var cumulativeMs = 0.0;
 
 		for (var loop = 0; options.loopCount == 0 || loop < options.loopCount; loop++) {
-			foreach (var step in macro.steps) {
+			for (var stepIndex = 0; stepIndex < macro.steps.Count; stepIndex++) {
+				var step = macro.steps[stepIndex];
+				ProgressChanged?.Invoke(this, new PlaybackProgress(
+					stepIndex, macro.steps.Count, loop, options.loopCount, step));
+
 				// 絶対時刻基準で待機し、ステップごとの丸め誤差が累積しないようにする
 				cumulativeMs += step.delayBeforeMs / options.speedMultiplier;
 				await PrecisionDelay.WaitUntilAsync(

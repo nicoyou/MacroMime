@@ -40,6 +40,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	private MacroRepository repository;
 	/// <summary>再生中のマクロを停止するためのキャンセルトークンソース</summary>
 	private CancellationTokenSource? playbackCancellationTokenSource;
+	/// <summary>再生中のマクロの steps 各要素の JSON 行番号。行番号不明なら空</summary>
+	private IReadOnlyList<int> playingStepLines = [];
+	/// <summary>UI 反映待ちの最新の再生進行状況</summary>
+	private PlaybackProgress? pendingProgress;
+	/// <summary>進行表示の UI 更新をキュー済みなら 1</summary>
+	private int progressUpdateQueued;
 	/// <summary>マクロファイル名からホットキー登録 ID への対応表</summary>
 	private readonly Dictionary<string, Guid> macroHotkeyIds = new(StringComparer.OrdinalIgnoreCase);
 	/// <summary>録画トグルホットキーの登録 ID</summary>
@@ -60,6 +66,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	/// <summary>録画中に記録したステップ数</summary>
 	[ObservableProperty]
 	private int recordedStepCount;
+	/// <summary>再生の進行状況の表示文言。空なら非表示</summary>
+	/// <remarks>停止後も次の再生・録画開始まで最終実行位置として保持する</remarks>
+	[ObservableProperty]
+	private string playbackProgressText = string.Empty;
 	/// <summary>画面に表示するマクロの一覧</summary>
 	public ObservableCollection<MacroItemViewModel> macros { get; } = [];
 
@@ -100,6 +110,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 			State = recording ? AppState.Recording : AppState.Idle);
 		this.player.IsPlayingChanged += (_, playing) => Dispatch(() =>
 			State = playing ? AppState.Playing : AppState.Idle);
+		this.player.ProgressChanged += OnPlaybackProgress;
 
 		RegisterGlobalHotkeys();
 		RefreshMacros();
@@ -133,6 +144,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	[RelayCommand(CanExecute = nameof(isIdle))]
 	private void Record() {
 		RecordedStepCount = 0;
+		PlaybackProgressText = string.Empty;
 		recorder.Start(new RecordingOptions());
 	}
 
@@ -160,18 +172,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	/// <summary>マクロを読み込んで再生を開始する</summary>
 	/// <param name="item">再生するマクロの行</param>
 	private void PlayMacro(MacroItemViewModel item) {
-		Macro macro;
+		LoadedMacro loaded;
 		try {
-			macro = repository.Load(item.filePath);
+			loaded = repository.LoadWithStepLines(item.filePath);
 		}
 		catch (MacroFormatException ex) {
 			MessageBox.Show(ex.Message, "再生できません", MessageBoxButton.OK, MessageBoxImage.Warning);
 			return;
 		}
 
+		playingStepLines = loaded.stepLines;
+		PlaybackProgressText = string.Empty;
 		playbackCancellationTokenSource = new CancellationTokenSource();
 		var options = new PlaybackOptions { speedMultiplier = item.Speed, loopCount = item.LoopCount };
-		_ = player.PlayAsync(macro, options, playbackCancellationTokenSource.Token);
+		_ = player.PlayAsync(loaded.macro, options, playbackCancellationTokenSource.Token);
 	}
 
 	/// <summary>再生を停止する</summary>
@@ -282,6 +296,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 		return dialog.ShowDialog() == true ? dialog.enteredName : null;
 	}
 
+	/// <summary>保留中の最新の進行状況を表示文言へ反映する</summary>
+	/// <remarks>キュー済みフラグを先に解除してから最新値を読むことで、直後の通知を取りこぼさない</remarks>
+	private void ApplyPendingProgress() {
+		Volatile.Write(ref progressUpdateQueued, 0);
+		var latest = Volatile.Read(ref pendingProgress);
+		if (latest is not null) PlaybackProgressText = FormatProgress(latest);
+	}
+
+	/// <summary>進行状況からステータスバー用の表示文言を組み立てる</summary>
+	/// <param name="progress">再生の進行状況</param>
+	/// <returns>ステータスバー用の表示文言</returns>
+	private string FormatProgress(PlaybackProgress progress) {
+		var loopPart = progress.loopCount == 1 ? string.Empty : $" ( {progress.loopIndex + 1} 周目 )";
+		var linePart = progress.stepIndex < playingStepLines.Count
+			? $"行 {playingStepLines[progress.stepIndex]}: " : string.Empty;
+		return $"ステップ {progress.stepIndex + 1}/{progress.totalSteps}{loopPart} | {linePart}{MacroStepFormatter.Describe(progress.step)}";
+	}
+
 	/// <summary>UI スレッド上でアクションを実行する</summary>
 	/// <param name="action">実行するアクション</param>
 	private static void Dispatch(Action action) {
@@ -320,6 +352,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	/// <summary>選択変更時に再生コマンドの実行可否を更新する</summary>
 	/// <param name="value">変更後の選択マクロ</param>
 	partial void OnSelectedMacroChanged(MacroItemViewModel? value) => PlayCommand.NotifyCanExecuteChanged();
+
+	/// <summary>再生スレッドからの進行通知を最新値だけ保持し、UI スレッドへ合流して反映する</summary>
+	/// <remarks>UI 更新のキューは常に高々 1 件になるため、高速再生でも再生スレッドをブロックしない</remarks>
+	/// <param name="sender">イベントの発生元</param>
+	/// <param name="progress">再生の進行状況</param>
+	private void OnPlaybackProgress(object? sender, PlaybackProgress progress) {
+		Volatile.Write(ref pendingProgress, progress);
+		if (Interlocked.Exchange(ref progressUpdateQueued, 1) != 0) return;
+		var app = Application.Current;
+		if (app is null) {
+			ApplyPendingProgress();
+		}
+		else {
+			app.Dispatcher.BeginInvoke(ApplyPendingProgress);
+		}
+	}
 
 	/// <summary>マクロ名の編集を受けてファイルへ反映する。失敗時は元の名前に差し戻す</summary>
 	/// <param name="item">名前が編集されたマクロの行</param>

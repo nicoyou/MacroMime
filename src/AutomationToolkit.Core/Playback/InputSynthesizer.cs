@@ -3,9 +3,30 @@ using AutomationToolkit.Core.Models;
 
 namespace AutomationToolkit.Core.Playback;
 
+/// <summary>マウス・キーボード入力の合成を提供する</summary>
+public interface IInputSynthesizer {
+	/// <summary>仮想スクリーンの範囲を再取得する</summary>
+	void RefreshVirtualScreenMetrics();
+
+	/// <summary>ステップに対応する入力を送出する</summary>
+	/// <param name="step">送出する操作ステップ</param>
+	void Send(MacroStep step);
+
+	/// <summary>キー入力を送出する</summary>
+	/// <param name="virtualKey">Win32 仮想キーコード</param>
+	/// <param name="scanCode">ハードウェアスキャンコード。0 なら virtualKey で送出する</param>
+	/// <param name="isExtended">拡張キーかどうか</param>
+	/// <param name="down">true なら押下、false なら解放</param>
+	void SendKey(ushort virtualKey, ushort scanCode, bool isExtended, bool down);
+
+	/// <summary>マウスボタンの解放入力を送出する</summary>
+	/// <param name="button">解放するマウスボタン</param>
+	void SendMouseButtonUp(MouseButton button);
+}
+
 /// <summary>SendInput によるマウス・キーボード入力の合成を担当する</summary>
 /// <remarks>座標は送出時に 0-65535 の仮想スクリーン絶対座標へ正規化する</remarks>
-public sealed class InputSynthesizer {
+public sealed class InputSynthesizer : IInputSynthesizer {
 	/// <summary>仮想スクリーンの左端座標</summary>
 	private int virtualScreenLeft;
 	/// <summary>仮想スクリーンの上端座標</summary>
@@ -18,7 +39,7 @@ public sealed class InputSynthesizer {
 	/// <summary>仮想スクリーンの範囲を取得して初期化する</summary>
 	public InputSynthesizer() => RefreshVirtualScreenMetrics();
 
-	/// <summary>仮想スクリーンの範囲を再取得する</summary>
+	/// <inheritdoc/>
 	/// <remarks>録画時とモニタ構成が変わっている可能性があるため、再生セッション開始ごとに呼ぶ</remarks>
 	public void RefreshVirtualScreenMetrics() {
 		virtualScreenLeft = NativeMethods.GetSystemMetrics(Win32.SM_XVIRTUALSCREEN);
@@ -27,8 +48,7 @@ public sealed class InputSynthesizer {
 		virtualScreenHeight = Math.Max(NativeMethods.GetSystemMetrics(Win32.SM_CYVIRTUALSCREEN), 2);
 	}
 
-	/// <summary>ステップに対応する入力を送出する</summary>
-	/// <param name="step">送出する操作ステップ</param>
+	/// <inheritdoc/>
 	/// <exception cref="NotSupportedException">未対応のステップ型の場合</exception>
 	public void Send(MacroStep step) {
 		switch (step) {
@@ -56,11 +76,7 @@ public sealed class InputSynthesizer {
 		}
 	}
 
-	/// <summary>キー入力を送出する</summary>
-	/// <param name="virtualKey">Win32 仮想キーコード</param>
-	/// <param name="scanCode">ハードウェアスキャンコード。0 なら virtualKey で送出する</param>
-	/// <param name="isExtended">拡張キーかどうか</param>
-	/// <param name="down">true なら押下、false なら解放</param>
+	/// <inheritdoc/>
 	public void SendKey(ushort virtualKey, ushort scanCode, bool isExtended, bool down) {
 		var ki = new KEYBDINPUT();
 		if (scanCode != 0) {
@@ -76,8 +92,7 @@ public sealed class InputSynthesizer {
 		SendInputs([new INPUT { type = Win32.INPUT_KEYBOARD, U = new InputUnion { ki = ki } }]);
 	}
 
-	/// <summary>マウスボタンの解放入力を送出する</summary>
-	/// <param name="button">解放するマウスボタン</param>
+	/// <inheritdoc/>
 	public void SendMouseButtonUp(MouseButton button)
 		=> SendInputs([MakeMouseButton(button, down: false)]);
 

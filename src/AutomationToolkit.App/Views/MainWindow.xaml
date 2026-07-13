@@ -47,6 +47,17 @@
                 <TextBlock Text="{Binding StatusText}" FontWeight="Bold"/>
                 <TextBlock Text="{Binding RecordedStepCount, StringFormat=' ({0} ステップ)'}"
                            Visibility="{Binding State, Converter={StaticResource RecordingVisibility}}"/>
+                <TextBlock Margin="8,0,0,0" Text="{Binding PlaybackProgressText}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PlaybackProgressText}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </Border>
 

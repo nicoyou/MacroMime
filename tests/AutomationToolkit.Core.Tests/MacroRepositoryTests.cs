@@ -1,3 +1,4 @@
+using System.Text;
 using AutomationToolkit.Core.Models;
 using AutomationToolkit.Core.Persistence;
 
@@ -92,5 +93,49 @@ public class MacroRepositoryTests : IDisposable {
 		var repo = new MacroRepository(Path.Combine(tempDir, "does-not-exist"));
 
 		Assert.Empty(repo.ListMacroFiles());
+	}
+
+	/// <summary>行番号付き読み込みで全ステップ分の行番号が得られ、各行がステップの開始行を指す</summary>
+	[Fact]
+	public void LoadWithStepLines_ReturnsLineForEachStep() {
+		var repo = new MacroRepository(tempDir);
+		var macro = new Macro {
+			name = "with-lines",
+			steps =
+			[
+				new MouseMoveStep { x = 1, y = 2, delayBeforeMs = 10 },
+				new KeyDownStep { virtualKey = 65, scanCode = 30 },
+			],
+		};
+		var path = repo.Save(macro);
+
+		var loaded = repo.LoadWithStepLines(path);
+
+		Assert.Equal(loaded.macro.steps.Count, loaded.stepLines.Count);
+		// WriteIndented では各ステップは "{" のみの行から始まる
+		var lines = File.ReadAllLines(path);
+		Assert.All(loaded.stepLines, line => Assert.Equal("{", lines[line - 1].Trim()));
+	}
+
+	/// <summary>BOM 付きのマクロファイルも行番号付きで読み込める</summary>
+	[Fact]
+	public void LoadWithStepLines_Utf8Bom_Works() {
+		Directory.CreateDirectory(tempDir);
+		var path = Path.Combine(tempDir, "bom.json");
+		const string json = """
+		{
+		  "schemaVersion": 1,
+		  "name": "bom",
+		  "steps": [
+		    { "$type": "mouseMove", "x": 1, "y": 2 }
+		  ]
+		}
+		""";
+		File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+		var loaded = new MacroRepository(tempDir).LoadWithStepLines(path);
+
+		Assert.Equal("bom", loaded.macro.name);
+		Assert.Equal([5], loaded.stepLines);
 	}
 }

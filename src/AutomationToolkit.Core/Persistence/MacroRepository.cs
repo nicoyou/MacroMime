@@ -10,6 +10,11 @@ namespace AutomationToolkit.Core.Persistence;
 public sealed class MacroFormatException(string message, Exception? inner = null)
 	: Exception(message, inner);
 
+/// <summary>読み込んだマクロと steps 各要素の JSON 行番号</summary>
+/// <param name="macro">読み込んだマクロ</param>
+/// <param name="stepLines">steps 配列の各要素が始まる 1 始まりの行番号の一覧</param>
+public sealed record LoadedMacro(Macro macro, IReadOnlyList<int> stepLines);
+
 /// <summary>macros フォルダ内の JSON マクロファイルの読み書きを担当する</summary>
 /// <param name="folder">マクロファイルを保存するフォルダのパス</param>
 public sealed class MacroRepository(string folder) {
@@ -29,11 +34,23 @@ public sealed class MacroRepository(string folder) {
 	/// <param name="filePath">読み込むマクロファイルのパス</param>
 	/// <returns>読み込んだマクロ</returns>
 	/// <exception cref="MacroFormatException">JSON が不正、またはスキーマバージョンが非対応の場合</exception>
-	public Macro Load(string filePath) {
+	public Macro Load(string filePath) => LoadWithStepLines(filePath).macro;
+
+	/// <summary>マクロファイルを steps の行番号情報付きで読み込む</summary>
+	/// <remarks>外部エディタでの保存と競合しないよう、同一のバイト列からマクロと行番号の両方を求める</remarks>
+	/// <param name="filePath">読み込むマクロファイルのパス</param>
+	/// <returns>読み込んだマクロと steps 各要素の行番号</returns>
+	/// <exception cref="MacroFormatException">JSON が不正、またはスキーマバージョンが非対応の場合</exception>
+	public LoadedMacro LoadWithStepLines(string filePath) {
+		var bytes = File.ReadAllBytes(filePath);
+		// Utf8JsonReader は BOM を受け付けないため先頭から除去する ( BOM は改行を含まないので行番号はずれない )
+		ReadOnlySpan<byte> utf8Bom = [0xEF, 0xBB, 0xBF];
+		var utf8Json = bytes.AsSpan();
+		if (utf8Json.StartsWith(utf8Bom)) utf8Json = utf8Json[utf8Bom.Length..];
+
 		Macro? macro;
 		try {
-			using var stream = File.OpenRead(filePath);
-			macro = JsonSerializer.Deserialize<Macro>(stream, MacroJson.Default);
+			macro = JsonSerializer.Deserialize<Macro>(utf8Json, MacroJson.Default);
 		}
 		catch (JsonException ex) {
 			throw new MacroFormatException($"マクロファイルの JSON が不正です: {filePath}", ex);
@@ -45,7 +62,7 @@ public sealed class MacroRepository(string folder) {
 				$"schemaVersion {macro.schemaVersion} は新しすぎます (対応バージョン: {Macro.CURRENT_SCHEMA_VERSION})。" +
 				$"新しいバージョンのアプリで作成されたファイルです: {filePath}");
 		}
-		return macro;
+		return new LoadedMacro(macro, MacroStepLineLocator.LocateStepLines(utf8Json));
 	}
 
 	/// <summary>マクロ名から決めた保存先パスへマクロを保存する</summary>
