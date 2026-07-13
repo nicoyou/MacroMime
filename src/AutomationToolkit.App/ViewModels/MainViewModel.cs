@@ -253,6 +253,29 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 		PersistBindings();
 	}
 
+	/// <summary>対象マクロを連番付きの名前で複製し、一覧と設定を更新する</summary>
+	/// <remarks>速度・ループ設定は引き継ぐが、ホットキーは重複を避けるため引き継がない</remarks>
+	/// <param name="item">複製対象のマクロの行。null なら選択中のマクロ</param>
+	[RelayCommand(CanExecute = nameof(isIdle))]
+	private void DuplicateMacro(MacroItemViewModel? item) {
+		item ??= SelectedMacro;
+		if (item is null) return;
+		string duplicatedPath;
+		try {
+			duplicatedPath = repository.Duplicate(item.filePath);
+		}
+		catch (Exception ex) when (ex is MacroFormatException or IOException) {
+			MessageBox.Show(ex.Message, "複製できません", MessageBoxButton.OK, MessageBoxImage.Warning);
+			return;
+		}
+		settings.bindings[Path.GetFileName(duplicatedPath)] = new MacroBinding {
+			speed = item.Speed,
+			loopCount = item.LoopCount,
+		};
+		RefreshMacros();
+		PersistBindings();
+	}
+
 	/// <summary>マクロフォルダをエクスプローラーで開く</summary>
 	[RelayCommand]
 	private void OpenMacrosFolder() {
@@ -373,6 +396,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 		PlayCommand.NotifyCanExecuteChanged();
 		StopPlaybackCommand.NotifyCanExecuteChanged();
 		EditMacroCommand.NotifyCanExecuteChanged();
+		DuplicateMacroCommand.NotifyCanExecuteChanged();
 		DeleteMacroCommand.NotifyCanExecuteChanged();
 		StateChangedForTray?.Invoke();
 	}

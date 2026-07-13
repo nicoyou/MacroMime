@@ -104,6 +104,48 @@ public class MacroRepositoryTests : IDisposable {
 		Assert.Throws<MacroFormatException>(() => new MacroRepository(tempDir).Rename(path, "after"));
 	}
 
+	/// <summary>複製すると名前とファイル名の末尾に連番が付いた新しいファイルが作られ、ステップも引き継がれる</summary>
+	[Fact]
+	public void Duplicate_AppendsNumberSuffixToNameAndFileName() {
+		var repo = new MacroRepository(tempDir);
+		var path = repo.Save(new Macro {
+			name = "macro",
+			steps = [new KeyDownStep { virtualKey = 65, scanCode = 30, delayBeforeMs = 50 }],
+		});
+
+		var duplicatedPath = repo.Duplicate(path);
+
+		Assert.Equal(Path.Combine(repo.macrosFolder, "macro_1.json"), duplicatedPath);
+		var duplicated = repo.Load(duplicatedPath);
+		Assert.Equal("macro_1", duplicated.name);
+		var step = Assert.IsType<KeyDownStep>(Assert.Single(duplicated.steps));
+		Assert.Equal(50, step.delayBeforeMs);
+		Assert.Equal(2, repo.ListMacroFiles().Count);
+	}
+
+	/// <summary>複製を繰り返すと連番が増えていく</summary>
+	[Fact]
+	public void Duplicate_Twice_IncrementsSuffix() {
+		var repo = new MacroRepository(tempDir);
+		var path = repo.Save(new Macro { name = "macro" });
+
+		repo.Duplicate(path);
+		var secondPath = repo.Duplicate(path);
+
+		Assert.Equal("macro_2", repo.Load(secondPath).name);
+		Assert.Equal(3, repo.ListMacroFiles().Count);
+	}
+
+	/// <summary>壊れたマクロを複製しようとすると MacroFormatException が発生する</summary>
+	[Fact]
+	public void Duplicate_CorruptJson_ThrowsMacroFormatException() {
+		Directory.CreateDirectory(tempDir);
+		var path = Path.Combine(tempDir, "broken.json");
+		File.WriteAllText(path, "{ this is not json");
+
+		Assert.Throws<MacroFormatException>(() => new MacroRepository(tempDir).Duplicate(path));
+	}
+
 	/// <summary>ファイル名に使えない文字が保存先パスから除去される</summary>
 	[Fact]
 	public void GetPathFor_SanitizesInvalidFileNameChars() {

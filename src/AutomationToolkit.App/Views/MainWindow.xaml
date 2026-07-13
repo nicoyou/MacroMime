@@ -15,19 +15,23 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- ツールバー -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="● 録画" Command="{Binding RecordCommand}" Width="80" Margin="0,0,6,0"/>
-            <Button Content="■ 録画停止" Command="{Binding StopRecordingCommand}" Width="90" Margin="0,0,6,0"/>
-            <Separator Margin="6,0"/>
-            <Button Content="▶ 再生" Command="{Binding PlayCommand}" Width="80" Margin="0,0,6,0"/>
-            <Button Content="■ 再生停止" Command="{Binding StopPlaybackCommand}" Width="90" Margin="0,0,6,0"/>
-            <Separator Margin="6,0"/>
-            <Button Content="✎ 編集" Command="{Binding EditMacroCommand}" Width="80" Margin="0,0,6,0"/>
-            <Button Content="🗑 削除" Command="{Binding DeleteMacroCommand}" Width="80" Margin="0,0,6,0"/>
-            <Separator Margin="6,0"/>
-            <Button Content="フォルダを開く" Command="{Binding OpenMacrosFolderCommand}" Width="100"/>
-        </StackPanel>
+        <!-- ツールバー ( ウィンドウ幅に収まらない場合は機能グループ単位で折り返す ) -->
+        <WrapPanel Grid.Row="0" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                <Button Content="● 録画" Command="{Binding RecordCommand}" Width="80" Margin="0,0,6,0"/>
+                <Button Content="■ 録画停止" Command="{Binding StopRecordingCommand}" Width="90"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                <Button Content="▶ 再生" Command="{Binding PlayCommand}" Width="80" Margin="0,0,6,0"/>
+                <Button Content="■ 再生停止" Command="{Binding StopPlaybackCommand}" Width="90"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                <Button Content="✎ 編集" Command="{Binding EditMacroCommand}" Width="80" Margin="0,0,6,0"/>
+                <Button Content="⧉ 複製" Command="{Binding DuplicateMacroCommand}" Width="80" Margin="0,0,6,0"/>
+                <Button Content="🗑 削除" Command="{Binding DeleteMacroCommand}" Width="80"/>
+            </StackPanel>
+            <Button Content="フォルダを開く" Command="{Binding OpenMacrosFolderCommand}" Width="100" Margin="0,0,0,4"/>
+        </WrapPanel>
 
         <!-- 状態表示 -->
         <Border Grid.Row="1" Padding="8,6" Margin="0,0,0,8" CornerRadius="4">

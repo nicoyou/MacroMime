@@ -94,6 +94,27 @@ public sealed class MacroRepository(string folder) {
 		SaveTo(filePath, macro);
 	}
 
+	/// <summary>マクロを複製し、名前とファイル名の末尾に連番を付けた新しいファイルとして保存する</summary>
+	/// <param name="filePath">複製元のマクロファイルのパス</param>
+	/// <returns>複製先のファイルパス</returns>
+	/// <exception cref="MacroFormatException">元ファイルが読み込めない場合</exception>
+	public string Duplicate(string filePath) {
+		var macro = Load(filePath);
+		macro.name = GenerateDuplicateName(macro.name);
+		macro.createdUtc = DateTimeOffset.UtcNow;
+		return Save(macro);
+	}
+
+	/// <summary>末尾に連番を付けた、既存ファイルと衝突しない複製名を生成する</summary>
+	/// <param name="baseName">複製元のマクロ名</param>
+	/// <returns>連番付きの複製名</returns>
+	private string GenerateDuplicateName(string baseName) {
+		for (var number = 1; ; number++) {
+			var candidate = $"{baseName}_{number}";
+			if (File.Exists(GetPathFor(candidate)) == false) return candidate;
+		}
+	}
+
 	/// <summary>マクロファイルをゴミ箱へ移動する</summary>
 	/// <param name="filePath">削除するマクロファイルのパス</param>
 	/// <exception cref="FileNotFoundException">ファイルが存在しない場合</exception>
