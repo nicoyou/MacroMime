@@ -53,6 +53,25 @@ public static class MacroStepEditor {
 		return removedCount;
 	}
 
+	/// <summary>指定位置のステップを 1 件削除する</summary>
+	/// <param name="steps">編集するステップ列</param>
+	/// <param name="index">削除するステップの 0 始まりの位置</param>
+	/// <param name="delayHandling">削除したステップの delayBeforeMs の扱い</param>
+	/// <returns>削除したステップ数</returns>
+	/// <exception cref="ArgumentOutOfRangeException">位置がステップ列の範囲外の場合</exception>
+	public static int RemoveStepAt(List<MacroStep> steps, int index, RemovedDelayHandling delayHandling) {
+		if (index < 0 || index >= steps.Count) {
+			throw new ArgumentOutOfRangeException(nameof(index), "削除位置がステップ列の範囲外です");
+		}
+		var removed = steps[index];
+		steps.RemoveAt(index);
+		// 末尾の削除分は加算先が無いため破棄する ( マクロ終端の待機は再生結果に影響しない )
+		if (delayHandling == RemovedDelayHandling.AddToNextStep && index < steps.Count) {
+			steps[index].delayBeforeMs += removed.delayBeforeMs;
+		}
+		return 1;
+	}
+
 	/// <summary>指定型ステップの delayBeforeMs のうち、しきい値以上のものを指定値へ短縮する</summary>
 	/// <param name="steps">編集するステップ列</param>
 	/// <param name="thresholdMs">変換対象とする待機時間のしきい値 ( ms )</param>

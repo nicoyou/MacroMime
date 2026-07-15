@@ -9,12 +9,6 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AutomationToolkit.App.ViewModels;
 
-/// <summary>ステップ一覧の 1 行分の表示データ</summary>
-/// <param name="index">1 始まりのステップ番号</param>
-/// <param name="delayBeforeMs">実行前の待機ミリ秒数</param>
-/// <param name="description">ステップの要約文字列</param>
-public sealed record MacroStepRow(int index, int delayBeforeMs, string description);
-
 /// <summary>マクロ編集ダイアログのビューモデル</summary>
 public sealed partial class MacroEditorViewModel : ObservableObject {
 	/// <summary>クリックのクールダウン短縮の既定値 ( ms )</summary>
@@ -34,9 +28,14 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	private readonly Stack<List<MacroStep>> undoStack = new();
 	/// <summary>テスト再生を停止するためのキャンセルトークンソース</summary>
 	private CancellationTokenSource? testPlaybackCancellation;
+	/// <summary>不正な待機時間の入力を元の値へ戻している最中かどうか ( 差し戻しによる再通知を無視するためのガード )</summary>
+	private bool isRevertingDelayEdit;
 	/// <summary>ステップ一覧の表示データ</summary>
 	[ObservableProperty]
-	private IReadOnlyList<MacroStepRow> stepRows = [];
+	private IReadOnlyList<MacroStepRowViewModel> stepRows = [];
+	/// <summary>ステップ一覧で選択中の行。未選択なら null</summary>
+	[ObservableProperty]
+	private MacroStepRowViewModel? selectedStepRow;
 	/// <summary>テスト再生中かどうか</summary>
 	[ObservableProperty]
 	private bool isTestPlaying;
@@ -52,9 +51,9 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	/// <summary>mouseUp の待機時間の統計表示</summary>
 	[ObservableProperty]
 	private string mouseUpStatisticsText = string.Empty;
-	/// <summary>削除した mouseMove の待機時間を次に残るステップへ加算するかどうか</summary>
+	/// <summary>削除したステップの待機時間を次に残るステップへ加算するかどうか</summary>
 	[ObservableProperty]
-	private bool addRemovedDelayToNextStep = true;
+	private bool addRemovedDelayToNextStep = false;
 	/// <summary>クールダウン短縮で変換対象とするしきい値 ( ms )</summary>
 	[ObservableProperty]
 	private int clickCooldownThresholdMs = DEFAULT_CLICK_COOLDOWN_MS;
@@ -79,6 +78,11 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	private bool canEdit => IsTestPlaying == false;
 	/// <summary>元に戻す操作を実行できるかどうか</summary>
 	private bool canUndo => isDirty && canEdit;
+	/// <summary>選択中のステップを削除できるかどうか</summary>
+	private bool canDeleteStep => canEdit && SelectedStepRow != null;
+	/// <summary>削除したステップの待機時間の扱いの現在の設定</summary>
+	private RemovedDelayHandling removedDelayHandling =>
+		AddRemovedDelayToNextStep ? RemovedDelayHandling.AddToNextStep : RemovedDelayHandling.Discard;
 
 	/// <summary>編集対象のマクロを受け取って表示を初期化する</summary>
 	/// <param name="macro">編集対象のマクロの作業コピー</param>
@@ -96,9 +100,20 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	/// <summary>マウスボタン押下中でない区間の mouseMove を全て削除する</summary>
 	[RelayCommand(CanExecute = nameof(canEdit))]
 	private void RemoveNonDragMouseMoves() {
-		var delayHandling = AddRemovedDelayToNextStep ? RemovedDelayHandling.AddToNextStep : RemovedDelayHandling.Discard;
-		var removedCount = ApplyEdit(steps => MacroStepEditor.RemoveNonDragMouseMoves(steps, delayHandling));
+		var removedCount = ApplyEdit(steps => MacroStepEditor.RemoveNonDragMouseMoves(steps, removedDelayHandling));
 		OperationResultText = $"不要な mouseMove を {removedCount} 件削除しました";
+	}
+
+	/// <summary>ステップ一覧で選択中のステップを削除する</summary>
+	[RelayCommand(CanExecute = nameof(canDeleteStep))]
+	private void DeleteSelectedStep() {
+		if (SelectedStepRow is null) return;
+		var index = SelectedStepRow.index - 1;
+		var description = SelectedStepRow.description;
+		ApplyEdit(steps => MacroStepEditor.RemoveStepAt(steps, index, removedDelayHandling));
+		OperationResultText = $"ステップ {index + 1} ( {description} ) を削除しました";
+		// 削除した位置に近い行を選択し直して連続削除しやすくする
+		if (StepRows.Count > 0) SelectedStepRow = StepRows[Math.Min(index, StepRows.Count - 1)];
 	}
 
 	/// <summary>しきい値以上の mouseDown の待機時間を指定値へ短縮する</summary>
@@ -189,8 +204,17 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	/// <summary>ステップ一覧・統計・変更状態の表示を現在のステップ列から作り直す</summary>
 	private void RefreshView() {
 		StepRows = macro.steps
-			.Select((step, index) => new MacroStepRow(index + 1, step.delayBeforeMs, MacroStepFormatter.Describe(step)))
+			.Select((step, index) => {
+				var row = new MacroStepRowViewModel(index + 1, step.delayBeforeMs, MacroStepFormatter.Describe(step));
+				row.DelayEdited += OnStepDelayEdited;
+				return row;
+			})
 			.ToList();
+		RefreshStatistics();
+	}
+
+	/// <summary>統計・実行時間・変更状態の表示を現在のステップ列から作り直す</summary>
+	private void RefreshStatistics() {
 		MouseDownStatisticsText = FormatStatistics(MacroStepEditor.CalculateDelayStatistics<MouseDownStep>(macro.steps));
 		MouseUpStatisticsText = FormatStatistics(MacroStepEditor.CalculateDelayStatistics<MouseUpStep>(macro.steps));
 		TotalDurationText = $"実行時間: {FormatDuration(MacroStepEditor.CalculateTotalDurationMs(macro.steps))}";
@@ -216,10 +240,34 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 		return $"{minutes} 分 {totalSeconds - minutes * 60:0.0} 秒";
 	}
 
+	/// <summary>ステップ一覧のセル編集で待機時間が変更されたときにステップ列へ反映する</summary>
+	/// <remarks>セル編集の確定処理中に一覧を作り直すと編集トランザクションと衝突するため、行は再生成せず統計表示のみ更新する</remarks>
+	/// <param name="row">編集された行</param>
+	/// <param name="previousDelayMs">変更前の待機ミリ秒数</param>
+	private void OnStepDelayEdited(MacroStepRowViewModel row, int previousDelayMs) {
+		if (isRevertingDelayEdit) return;
+		if (row.DelayBeforeMs < 0) {
+			isRevertingDelayEdit = true;
+			row.DelayBeforeMs = previousDelayMs;
+			isRevertingDelayEdit = false;
+			OperationResultText = "待機時間には 0 以上を指定してください";
+			return;
+		}
+		undoStack.Push(MacroCloner.CloneSteps(macro.steps));
+		macro.steps[row.index - 1].delayBeforeMs = row.DelayBeforeMs;
+		OperationResultText = $"ステップ {row.index} の待機時間を {previousDelayMs} ms から {row.DelayBeforeMs} ms へ変更しました";
+		RefreshStatistics();
+	}
+
+	/// <summary>選択行の変化に応じて削除コマンドの実行可否を更新する</summary>
+	/// <param name="value">変更後の選択行</param>
+	partial void OnSelectedStepRowChanged(MacroStepRowViewModel? value) => DeleteSelectedStepCommand.NotifyCanExecuteChanged();
+
 	/// <summary>テスト再生状態の変化に応じて各コマンドの実行可否を更新する</summary>
 	/// <param name="value">変更後のテスト再生状態</param>
 	partial void OnIsTestPlayingChanged(bool value) {
 		RemoveNonDragMouseMovesCommand.NotifyCanExecuteChanged();
+		DeleteSelectedStepCommand.NotifyCanExecuteChanged();
 		UnifyClickCooldownCommand.NotifyCanExecuteChanged();
 		UnifyClickDurationCommand.NotifyCanExecuteChanged();
 		UndoCommand.NotifyCanExecuteChanged();
