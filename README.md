@@ -1,4 +1,4 @@
-# AutomationToolkit
+# MacroMime
 
 ゲームやWeb上の単純な繰り返し作業を自動化する、Windows 用のマクロ録画・再生ツールです。キー入力やマウス操作を録画し、グローバルホットキーから再生できます。
 
@@ -13,20 +13,20 @@
 
 | プロジェクト | 役割 |
 |---|---|
-| `AutomationToolkit.Core` | UI非依存のエンジン (モデル・永続化・録画・再生・フック)。標準ライブラリのみに依存。 |
-| `AutomationToolkit.App` | WPF GUI アプリ。 |
-| `AutomationToolkit.Core.Tests` | xUnit 単体テスト。 |
+| `MacroMime.Core` | UI非依存のエンジン (モデル・永続化・録画・再生・フック)。標準ライブラリのみに依存。 |
+| `MacroMime.App` | WPF GUI アプリ。 |
+| `MacroMime.Core.Tests` | xUnit 単体テスト。 |
 
 ## 動作環境・ビルド
 
 - .NET 10 SDK (Windows)
 - ビルド: `dotnet build`
 - テスト: `dotnet test`
-- GUI 起動: `dotnet run --project src/AutomationToolkit.App`
+- GUI 起動: `dotnet run --project src/MacroMime.App`
 
 ## 使い方
 
-1. アプリを起動すると、マクロ一覧が表示されます (保存先: `%APPDATA%\AutomationToolkit\macros`)。
+1. アプリを起動すると、マクロ一覧が表示されます (保存先: `%APPDATA%\MacroMime\macros`)。
 2. **● 録画** ボタン、または **Ctrl+Alt+R** で録画開始。もう一度押すと停止し、名前を付けて保存します。
 3. 一覧でマクロを選び **▶ 再生**。再生中は **Ctrl+Alt+S** または **■ 再生停止** で中断できます。
 4. 「ホットキー」欄をクリックすると、そのマクロに再生用ホットキーを割り当てられます。

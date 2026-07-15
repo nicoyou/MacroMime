@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MacroMime.App/MacroMime.App.csproj" />
+    <Project Path="src/MacroMime.Core/MacroMime.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MacroMime.Core.Tests/MacroMime.Core.Tests.csproj" />
+  </Folder>
+</Solution>
