@@ -15,8 +15,6 @@ public sealed class MacroBinding {
 
 /// <summary>アプリ全体の設定</summary>
 public sealed class AppSettings {
-	/// <summary>マクロファイルを保存するフォルダのパス。null なら既定のフォルダ</summary>
-	public string? macrosFolder { get; set; }
 	/// <summary>録画の開始・停止をトグルするホットキー</summary>
 	public HotkeyChord recordHotkey { get; set; } = new(ChordModifiers.Control | ChordModifiers.Alt, 0x52); // Ctrl+Alt+R
 	/// <summary>再生を停止するホットキー</summary>

@@ -75,8 +75,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 	/// <summary>画面に表示するマクロの一覧</summary>
 	public ObservableCollection<MacroItemViewModel> macros { get; } = [];
 
-	/// <summary>マクロファイルを保存するフォルダの絶対パス</summary>
-	public string macrosFolder => repository.macrosFolder;
 	/// <summary>待機中かどうか</summary>
 	private bool isIdle => State == AppState.Idle;
 	/// <summary>録画中かどうか</summary>
@@ -105,7 +103,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable {
 		this.hotkeys = hotkeys;
 
 		settings = this.settingsService.Load();
-		repository = new MacroRepository(settings.macrosFolder ?? this.settingsService.defaultMacrosFolder);
+		repository = new MacroRepository(this.settingsService.macrosFolder);
 
 		this.recorder.StepRecorded += (_, count) => Dispatch(() => RecordedStepCount = count);
 		this.recorder.IsRecordingChanged += (_, recording) => Dispatch(() =>

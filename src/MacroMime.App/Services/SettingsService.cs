@@ -20,8 +20,8 @@ public sealed class SettingsService {
 
 	/// <summary>設定ファイルのパス</summary>
 	private string settingsPath => Path.Combine(settingsDirectory, "settings.json");
-	/// <summary>マクロフォルダ未設定時に使う既定のフォルダのパス</summary>
-	public string defaultMacrosFolder => Path.Combine(settingsDirectory, "macros");
+	/// <summary>マクロファイルを保存するフォルダのパス</summary>
+	public string macrosFolder => Path.Combine(settingsDirectory, "macros");
 
 	/// <summary>設定を読み込む</summary>
 	/// <remarks>ファイルがない場合や壊れている場合は既定値にフォールバックする</remarks>
@@ -32,7 +32,6 @@ public sealed class SettingsService {
 				var json = File.ReadAllText(settingsPath);
 				var settings = JsonSerializer.Deserialize<AppSettings>(json, jsonOptions);
 				if (settings is not null) {
-					settings.macrosFolder ??= defaultMacrosFolder;
 					return settings;
 				}
 			}
@@ -40,7 +39,7 @@ public sealed class SettingsService {
 		catch (Exception ex) when (ex is JsonException or IOException) {
 			// 壊れた設定でも起動できるよう既定値にフォールバック
 		}
-		return new AppSettings { macrosFolder = defaultMacrosFolder };
+		return new AppSettings();
 	}
 
 	/// <summary>設定を保存する</summary>
