@@ -60,12 +60,15 @@ public sealed partial class AddStepViewModel : ObservableObject {
 	/// <summary>キーキャプチャモード中かどうか</summary>
 	[ObservableProperty]
 	private bool isCapturingKey;
+	/// <summary>押すステップの直後に対応する離すステップを自動挿入するかどうか</summary>
+	[ObservableProperty]
+	private bool insertMatchingRelease = true;
 
 	/// <summary>入力内容の確定によるダイアログを閉じる要求</summary>
 	public event Action? CloseRequested;
 
-	/// <summary>確定時に作成されたステップ。未確定なら null</summary>
-	public MacroStep? createdStep { get; private set; }
+	/// <summary>確定時に作成されたステップ列。未確定なら空</summary>
+	public IReadOnlyList<MacroStep> createdSteps { get; private set; } = [];
 	/// <summary>ステップ種別の選択肢</summary>
 	public IReadOnlyList<AddStepKindItem> kinds { get; } = [
 		new(AddStepKind.KeyDown, "keyDown ( キーを押す )"),
@@ -86,6 +89,8 @@ public sealed partial class AddStepViewModel : ObservableObject {
 	public bool showsMouseButton => SelectedKind is AddStepKind.MouseDown or AddStepKind.MouseUp;
 	/// <summary>ホイール入力欄を表示するかどうか</summary>
 	public bool showsWheel => SelectedKind == AddStepKind.MouseWheel;
+	/// <summary>離すステップの自動挿入の設定欄を表示するかどうか</summary>
+	public bool showsInsertMatchingRelease => SelectedKind is AddStepKind.KeyDown or AddStepKind.MouseDown;
 	/// <summary>キャプチャしたキーの表示名</summary>
 	public string capturedKeyText => CapturedVirtualKey == 0 ? "( 未取得 )" : VirtualKeyNames.GetName(CapturedVirtualKey);
 	/// <summary>入力内容を確定できるかどうか</summary>
@@ -108,9 +113,42 @@ public sealed partial class AddStepViewModel : ObservableObject {
 	/// <summary>入力内容からステップを作成してダイアログを閉じる</summary>
 	[RelayCommand(CanExecute = nameof(canConfirm))]
 	private void Confirm() {
-		createdStep = BuildStep();
+		createdSteps = BuildSteps();
 		CloseRequested?.Invoke();
 	}
+
+	/// <summary>現在の入力内容から挿入するステップ列を組み立てる</summary>
+	/// <remarks>離すステップの自動挿入が有効な場合、押すステップの直後に対応する離すステップを続ける</remarks>
+	/// <returns>組み立てたステップ列</returns>
+	private IReadOnlyList<MacroStep> BuildSteps() {
+		var step = BuildStep();
+		if (InsertMatchingRelease == false) return [step];
+		return step switch {
+			KeyDownStep keyDown => [keyDown, BuildKeyRelease(keyDown)],
+			MouseDownStep mouseDown => [mouseDown, BuildMouseRelease(mouseDown)],
+			_ => [step],
+		};
+	}
+
+	/// <summary>押すキーステップに対応する離すステップを組み立てる</summary>
+	/// <param name="source">対応元の押すステップ</param>
+	/// <returns>押してから離すまでの時間を待機に持つ離すステップ</returns>
+	private static KeyUpStep BuildKeyRelease(KeyDownStep source) => new() {
+		virtualKey = source.virtualKey,
+		scanCode = source.scanCode,
+		isExtended = source.isExtended,
+		delayBeforeMs = ClickTimingDefaults.DURATION_MS,
+	};
+
+	/// <summary>押すマウスステップに対応する離すステップを組み立てる</summary>
+	/// <param name="source">対応元の押すステップ</param>
+	/// <returns>押してから離すまでの時間を待機に持つ離すステップ</returns>
+	private static MouseUpStep BuildMouseRelease(MouseDownStep source) => new() {
+		button = source.button,
+		x = source.x,
+		y = source.y,
+		delayBeforeMs = ClickTimingDefaults.DURATION_MS,
+	};
 
 	/// <summary>現在の入力内容からステップを組み立てる</summary>
 	/// <returns>組み立てたステップ</returns>
@@ -131,6 +169,7 @@ public sealed partial class AddStepViewModel : ObservableObject {
 		OnPropertyChanged(nameof(showsCoordinates));
 		OnPropertyChanged(nameof(showsMouseButton));
 		OnPropertyChanged(nameof(showsWheel));
+		OnPropertyChanged(nameof(showsInsertMatchingRelease));
 		ConfirmCommand.NotifyCanExecuteChanged();
 	}
 

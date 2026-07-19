@@ -95,6 +95,6 @@
         </DataGrid>
 
         <TextBlock Grid.Row="3" Margin="0,8,0,0" Foreground="Gray" TextWrapping="Wrap"
-                   Text="ヒント: 名前・速度・ループはセルをダブルクリックで編集。編集ボタンでステップの一括整理。ホットキー欄をクリックで割り当て。Delete キーで選択マクロをゴミ箱へ。既定の録画トグルは Ctrl+Alt+R、全停止は Ctrl+Alt+S。"/>
+                   Text="ヒント: 名前・速度・ループはセルをダブルクリックで編集。Delete キーで選択マクロをゴミ箱へ。既定の録画トグルは Ctrl+Alt+R、全停止は Ctrl+Alt+S。"/>
     </Grid>
 </Window>

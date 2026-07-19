@@ -80,8 +80,14 @@
                               Padding="8,0" VerticalAlignment="Stretch"/>
             </StackPanel>
             <TextBlock Margin="60,4,0,0" Foreground="Gray" TextWrapping="Wrap"
-                       Text="「キーを取得」を押した後、登録したいキーを押してください ( Esc や Enter も登録できます )"/>
+                       Text="「キーを取得」を押した後、登録したいキーを押してください"/>
         </StackPanel>
+
+        <!-- 離すステップの自動挿入 ( keyDown / mouseDown のみ ) -->
+        <CheckBox Grid.Row="5" VerticalAlignment="Top" Margin="60,12,0,0"
+                  Content="直後に入力を離すステップも追加する"
+                  IsChecked="{Binding InsertMatchingRelease}"
+                  Visibility="{Binding showsInsertMatchingRelease, Converter={StaticResource BoolToVisibility}}"/>
 
         <!-- OK / キャンセル -->
         <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">

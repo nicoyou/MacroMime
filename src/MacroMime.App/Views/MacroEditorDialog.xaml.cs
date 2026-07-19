@@ -21,7 +21,7 @@ public partial class MacroEditorDialog : Window {
 		};
 		viewModel.AddStepRequested += () => {
 			var dialog = new AddStepDialog(new AddStepViewModel()) { Owner = this };
-			if (dialog.ShowDialog() == true && dialog.createdStep is not null) viewModel.InsertNewStep(dialog.createdStep);
+			if (dialog.ShowDialog() == true) viewModel.InsertNewSteps(dialog.createdSteps);
 		};
 	}
 

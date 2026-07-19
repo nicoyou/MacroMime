@@ -11,11 +11,6 @@ namespace MacroMime.App.ViewModels;
 
 /// <summary>マクロ編集ダイアログのビューモデル</summary>
 public sealed partial class MacroEditorViewModel : ObservableObject {
-	/// <summary>クリックのクールダウン短縮の既定値 ( ms )</summary>
-	private const int DEFAULT_CLICK_COOLDOWN_MS = 50;
-	/// <summary>クリック時間の短縮の既定値 ( ms )</summary>
-	private const int DEFAULT_CLICK_DURATION_MS = 20;
-
 	/// <summary>マクロファイルのリポジトリ</summary>
 	private readonly MacroRepository repository;
 	/// <summary>テスト再生に使う再生エンジン</summary>
@@ -59,16 +54,16 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	private bool addRemovedDelayToNextStep = false;
 	/// <summary>クールダウン短縮で変換対象とするしきい値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickCooldownThresholdMs = DEFAULT_CLICK_COOLDOWN_MS;
+	private int clickCooldownThresholdMs = ClickTimingDefaults.COOLDOWN_MS;
 	/// <summary>クールダウン短縮の変換後の値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickCooldownNewDelayMs = DEFAULT_CLICK_COOLDOWN_MS;
+	private int clickCooldownNewDelayMs = ClickTimingDefaults.COOLDOWN_MS;
 	/// <summary>クリック時間短縮で変換対象とするしきい値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickDurationThresholdMs = DEFAULT_CLICK_DURATION_MS;
+	private int clickDurationThresholdMs = ClickTimingDefaults.DURATION_MS;
 	/// <summary>クリック時間短縮の変換後の値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickDurationNewDelayMs = DEFAULT_CLICK_DURATION_MS;
+	private int clickDurationNewDelayMs = ClickTimingDefaults.DURATION_MS;
 
 	/// <summary>ダイアログを閉じる要求。引数が true なら保存済み</summary>
 	public event Action<bool>? CloseRequested;
@@ -145,13 +140,16 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	}
 
 	/// <summary>ダイアログで作成されたステップを選択行の直下へ挿入する。未選択なら末尾へ追加する</summary>
-	/// <param name="step">挿入するステップ</param>
-	public void InsertNewStep(MacroStep step) {
+	/// <param name="newSteps">挿入するステップ列</param>
+	public void InsertNewSteps(IReadOnlyList<MacroStep> newSteps) {
+		if (newSteps.Count == 0) return;
 		var insertIndex = SelectedStepRows.Count > 0 ? SelectedStepRows.Max(row => row.index) : macro.steps.Count;
-		ApplyEdit(steps => MacroStepEditor.InsertStepsAt(steps, insertIndex, [step]));
-		OperationResultText = $"ステップ {insertIndex + 1} に {MacroStepFormatter.Describe(step)} を追加しました";
-		// 追加した行を選択して連続追加しやすくする
-		SelectedStepRow = StepRows[insertIndex];
+		ApplyEdit(steps => MacroStepEditor.InsertStepsAt(steps, insertIndex, newSteps));
+		OperationResultText = newSteps.Count == 1
+			? $"ステップ {insertIndex + 1} に {MacroStepFormatter.Describe(newSteps[0])} を追加しました"
+			: $"ステップ {insertIndex + 1} に {newSteps.Count} 件のステップを追加しました";
+		// 追加した末尾の行を選択して連続追加しやすくする
+		SelectedStepRow = StepRows[insertIndex + newSteps.Count - 1];
 	}
 
 	/// <summary>しきい値以上の mouseDown の待機時間を指定値へ短縮する</summary>

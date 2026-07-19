@@ -25,8 +25,8 @@ public partial class AddStepDialog : Window {
 	/// <summary>カーソル位置取得ボタンの元の表示内容</summary>
 	private object? pickCursorButtonContent;
 
-	/// <summary>確定時に作成されたステップ。未確定なら null</summary>
-	public MacroStep? createdStep => viewModel.createdStep;
+	/// <summary>確定時に作成されたステップ列。未確定なら空</summary>
+	public IReadOnlyList<MacroStep> createdSteps => viewModel.createdSteps;
 
 	/// <summary>ビューモデルを受け取って初期化する</summary>
 	/// <param name="viewModel">入力状態を保持するビューモデル</param>
