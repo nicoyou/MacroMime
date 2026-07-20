@@ -49,21 +49,30 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	/// <summary>mouseUp の待機時間の統計表示</summary>
 	[ObservableProperty]
 	private string mouseUpStatisticsText = string.Empty;
+	/// <summary>mouseWheel の待機時間の統計表示</summary>
+	[ObservableProperty]
+	private string mouseWheelStatisticsText = string.Empty;
 	/// <summary>削除したステップの待機時間を次に残るステップへ加算するかどうか</summary>
 	[ObservableProperty]
 	private bool addRemovedDelayToNextStep = false;
 	/// <summary>クールダウン短縮で変換対象とするしきい値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickCooldownThresholdMs = ClickTimingDefaults.COOLDOWN_MS;
+	private int clickCooldownThresholdMs = InputTimingDefaults.COOLDOWN_MS;
 	/// <summary>クールダウン短縮の変換後の値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickCooldownNewDelayMs = ClickTimingDefaults.COOLDOWN_MS;
+	private int clickCooldownNewDelayMs = InputTimingDefaults.COOLDOWN_MS;
 	/// <summary>クリック時間短縮で変換対象とするしきい値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickDurationThresholdMs = ClickTimingDefaults.DURATION_MS;
+	private int clickDurationThresholdMs = InputTimingDefaults.DURATION_MS;
 	/// <summary>クリック時間短縮の変換後の値 ( ms )</summary>
 	[ObservableProperty]
-	private int clickDurationNewDelayMs = ClickTimingDefaults.DURATION_MS;
+	private int clickDurationNewDelayMs = InputTimingDefaults.DURATION_MS;
+	/// <summary>スクロール開始までの時間短縮で変換対象とするしきい値 ( ms )</summary>
+	[ObservableProperty]
+	private int scrollCooldownThresholdMs = InputTimingDefaults.COOLDOWN_MS;
+	/// <summary>スクロール開始までの時間短縮の変換後の値 ( ms )</summary>
+	[ObservableProperty]
+	private int scrollCooldownNewDelayMs = InputTimingDefaults.COOLDOWN_MS;
 
 	/// <summary>ダイアログを閉じる要求。引数が true なら保存済み</summary>
 	public event Action<bool>? CloseRequested;
@@ -170,6 +179,15 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 		OperationResultText = $"mouseUp の待機時間を {changedCount} 件変換しました";
 	}
 
+	/// <summary>しきい値以上の mouseWheel の待機時間 ( スクロール間隔 ) を指定値へ短縮する</summary>
+	[RelayCommand(CanExecute = nameof(canEdit))]
+	private void UnifyScrollCooldown() {
+		if (ValidateDelayInputs(ScrollCooldownThresholdMs, ScrollCooldownNewDelayMs) == false) return;
+		var changedCount = ApplyEdit(steps =>
+			MacroStepEditor.UnifyDelays<MouseWheelStep>(steps, ScrollCooldownThresholdMs, ScrollCooldownNewDelayMs));
+		OperationResultText = $"mouseWheel の待機時間を {changedCount} 件変換しました";
+	}
+
 	/// <summary>直前の一括操作を取り消す</summary>
 	[RelayCommand(CanExecute = nameof(canUndo))]
 	private void Undo() {
@@ -253,6 +271,7 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 	private void RefreshStatistics() {
 		MouseDownStatisticsText = FormatStatistics(MacroStepEditor.CalculateDelayStatistics<MouseDownStep>(macro.steps));
 		MouseUpStatisticsText = FormatStatistics(MacroStepEditor.CalculateDelayStatistics<MouseUpStep>(macro.steps));
+		MouseWheelStatisticsText = FormatStatistics(MacroStepEditor.CalculateDelayStatistics<MouseWheelStep>(macro.steps));
 		TotalDurationText = $"実行時間: {FormatDuration(MacroStepEditor.CalculateTotalDurationMs(macro.steps))}";
 		OnPropertyChanged(nameof(isDirty));
 		UndoCommand.NotifyCanExecuteChanged();
@@ -311,6 +330,7 @@ public sealed partial class MacroEditorViewModel : ObservableObject {
 		DuplicateSelectedStepsCommand.NotifyCanExecuteChanged();
 		UnifyClickCooldownCommand.NotifyCanExecuteChanged();
 		UnifyClickDurationCommand.NotifyCanExecuteChanged();
+		UnifyScrollCooldownCommand.NotifyCanExecuteChanged();
 		UndoCommand.NotifyCanExecuteChanged();
 		TestPlayCommand.NotifyCanExecuteChanged();
 		StopTestPlaybackCommand.NotifyCanExecuteChanged();

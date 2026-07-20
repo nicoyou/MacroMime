@@ -137,7 +137,7 @@ public sealed partial class AddStepViewModel : ObservableObject {
 		virtualKey = source.virtualKey,
 		scanCode = source.scanCode,
 		isExtended = source.isExtended,
-		delayBeforeMs = ClickTimingDefaults.DURATION_MS,
+		delayBeforeMs = InputTimingDefaults.DURATION_MS,
 	};
 
 	/// <summary>押すマウスステップに対応する離すステップを組み立てる</summary>
@@ -147,7 +147,7 @@ public sealed partial class AddStepViewModel : ObservableObject {
 		button = source.button,
 		x = source.x,
 		y = source.y,
-		delayBeforeMs = ClickTimingDefaults.DURATION_MS,
+		delayBeforeMs = InputTimingDefaults.DURATION_MS,
 	};
 
 	/// <summary>現在の入力内容からステップを組み立てる</summary>

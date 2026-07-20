@@ -91,7 +91,8 @@
                 </TextBlock>
             </Grid>
 
-            <StackPanel Grid.Column="1" Width="350" Margin="10,0,0,0">
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Width="350" Margin="10,0,0,0">
                 <GroupBox Header="行を削除した時の待機時間の扱い" Padding="8">
                     <StackPanel>
                         <TextBlock Text="行削除と mouseMove 削除で共通の設定" TextWrapping="Wrap"
@@ -114,7 +115,7 @@
 
                 <GroupBox Header="クリック開始までの時間を短縮" Padding="8" Margin="0,8,0,0">
                     <StackPanel>
-                        <TextBlock Text="mouseDown の待機時間 ( クリック間隔 ) が対象" TextWrapping="Wrap"
+                        <TextBlock Text="mouseDown の待機時間が対象" TextWrapping="Wrap"
                                    Foreground="Gray" Margin="0,0,0,6"/>
                         <TextBlock Text="{Binding MouseDownStatisticsText}" Margin="0,0,0,6"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -132,7 +133,7 @@
 
                 <GroupBox Header="クリック時間の短縮" Padding="8" Margin="0,8,0,0">
                     <StackPanel>
-                        <TextBlock Text="mouseUp の待機時間 ( ボタン押下時間 ) が対象" TextWrapping="Wrap"
+                        <TextBlock Text="mouseUp の待機時間が対象" TextWrapping="Wrap"
                                    Foreground="Gray" Margin="0,0,0,6"/>
                         <TextBlock Text="{Binding MouseUpStatisticsText}" Margin="0,0,0,6"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -147,7 +148,26 @@
                                 Command="{Binding UnifyClickDurationCommand}"/>
                     </StackPanel>
                 </GroupBox>
+
+                <GroupBox Header="スクロール開始までの時間を短縮" Padding="8" Margin="0,8,0,0">
+                    <StackPanel>
+                        <TextBlock Text="mouseWheel の待機時間が対象" TextWrapping="Wrap"
+                                   Foreground="Gray" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding MouseWheelStatisticsText}" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBox Text="{Binding ScrollCooldownThresholdMs, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="50" VerticalContentAlignment="Center"/>
+                            <TextBlock Text=" ms 以上を " VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding ScrollCooldownNewDelayMs, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="50" VerticalContentAlignment="Center"/>
+                            <TextBlock Text=" ms へ" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Content="実行" Width="80" HorizontalAlignment="Right"
+                                Command="{Binding UnifyScrollCooldownCommand}"/>
+                    </StackPanel>
+                </GroupBox>
             </StackPanel>
+            </ScrollViewer>
         </Grid>
 
         <!-- 保存 / 破棄 -->
