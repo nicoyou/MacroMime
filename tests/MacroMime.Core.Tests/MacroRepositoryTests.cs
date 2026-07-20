@@ -8,7 +8,7 @@ namespace MacroMime.Core.Tests;
 public class MacroRepositoryTests : IDisposable {
 	/// <summary>テストごとに使い捨てる一時フォルダのパス</summary>
 	private readonly string tempDir =
-		Path.Combine(Path.GetTempPath(), "atk-tests-" + Guid.NewGuid().ToString("N"));
+		Path.Combine(Path.GetTempPath(), $"atk-tests-{Guid.NewGuid():N}");
 
 	/// <summary>テストで作成した一時フォルダを削除する</summary>
 	public void Dispose() {

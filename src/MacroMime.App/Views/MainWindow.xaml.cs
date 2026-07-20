@@ -14,16 +14,16 @@ public partial class MainWindow : Window {
 		InitializeComponent();
 		this.viewModel = viewModel;
 		DataContext = viewModel;
-		Title = "MacroMime";
+		Title = AppInfo.TITLE;
 		this.viewModel.StateChangedForTray += UpdateTitle;
 	}
 
 	/// <summary>動作状態に応じてウィンドウタイトルを更新する</summary>
 	private void UpdateTitle() {
 		Title = viewModel.State switch {
-			AppState.Recording => "[REC] MacroMime",
-			AppState.Playing => "[再生中] MacroMime",
-			_ => "MacroMime",
+			AppState.Recording => $"[REC] {AppInfo.TITLE}",
+			AppState.Playing => $"[再生中] {AppInfo.TITLE}",
+			_ => AppInfo.TITLE,
 		};
 	}
 

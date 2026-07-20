@@ -143,6 +143,6 @@ public sealed class MacroRepository(string folder) {
 		var fileName = string.Join("_", macroName.Split(Path.GetInvalidFileNameChars(),
 			StringSplitOptions.RemoveEmptyEntries)).Trim();
 		if (fileName.Length == 0) fileName = "unnamed";
-		return Path.Combine(macrosFolder, fileName + ".json");
+		return Path.Combine(macrosFolder, $"{fileName}.json");
 	}
 }
